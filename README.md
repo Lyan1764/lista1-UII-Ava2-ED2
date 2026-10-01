@@ -46,12 +46,3 @@ O sistema controla o **stock** e os **preços** (variáveis conforme o volume da
 
 * **Linguagem de Programação:** C
 * **Estrutura Central:** Árvore Vermelho-Preta (Red-Black Tree)
-
-## 📦 Regras de Entrega
-
-* **Formato:** O desenvolvimento do código pode ser realizado individualmente ou em dupla (identificar os autores no cabeçalho do código). O **Relatório é obrigatoriamente individual**.
-* **Ficheiros a Submeter:** 
-  1. Ficheiros de Código Fonte (`.c` / `.h`).
-  2. Relatório Técnico em formato `PDF` (respeitando o modelo fornecido).
-* **Plataforma:** Submissão via SIGAA. Em caso de falha no sistema, remeter para o e-mail: `julianaoc@ufpi.edu.br`.
-* **Prazo:** *Verificar data agendada no SIGAA.*
