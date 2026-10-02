@@ -38,27 +38,22 @@ struct Revendedor {
     char cnpj[20];
     char nome[100], endereco[200], contato[50];
     struct Compra *historico;
-    int cor;
+    enum Cor cor;
     struct Revendedor *esq, *dir, *pai;
 };
 
-struct Revendedor sentinela;
-struct Revendedor *NIL = &sentinela;
-
-// Deixa a arvore vazia. NIL e o no preto que faz o papel de NULL.
-void iniciarArvore(struct Revendedor **raiz) {
-    sentinela.cor = PRETO;
-    sentinela.esq = sentinela.dir = sentinela.pai = NIL;
-    *raiz = NIL;
+// NULL conta como no preto, entao da para olhar a cor de qualquer ponteiro.
+enum Cor corDe(struct Revendedor *no) {
+    return no == NULL ? PRETO : no->cor;
 }
 
 void rotacaoEsquerda(struct Revendedor **raiz, struct Revendedor *x) {
     struct Revendedor *y = x->dir;
     x->dir = y->esq;
-    if (y->esq != NIL)
+    if (y->esq != NULL)
         y->esq->pai = x;
     y->pai = x->pai;
-    if (x->pai == NIL)
+    if (x->pai == NULL)
         *raiz = y;
     else if (x == x->pai->esq)
         x->pai->esq = y;
@@ -71,10 +66,10 @@ void rotacaoEsquerda(struct Revendedor **raiz, struct Revendedor *x) {
 void rotacaoDireita(struct Revendedor **raiz, struct Revendedor *x) {
     struct Revendedor *y = x->esq;
     x->esq = y->dir;
-    if (y->dir != NIL)
+    if (y->dir != NULL)
         y->dir->pai = x;
     y->pai = x->pai;
-    if (x->pai == NIL)
+    if (x->pai == NULL)
         *raiz = y;
     else if (x == x->pai->dir)
         x->pai->dir = y;
@@ -84,10 +79,10 @@ void rotacaoDireita(struct Revendedor **raiz, struct Revendedor *x) {
     x->pai = y;
 }
 
-// Busca o CNPJ descendo pela arvore. Retorna NIL se nao achar.
+// Busca o CNPJ descendo pela arvore. Retorna NULL se nao achar.
 struct Revendedor *buscarRevendedor(struct Revendedor *raiz, char *cnpj) {
-    if (raiz == NIL)
-        return NIL;
+    if (raiz == NULL)
+        return NULL;
     int cmp = strcmp(cnpj, raiz->cnpj);
     if (cmp == 0)
         return raiz;
@@ -98,10 +93,10 @@ struct Revendedor *buscarRevendedor(struct Revendedor *raiz, char *cnpj) {
 
 // Conserta as cores e rotaciona depois de inserir o no z.
 void corrigirInsercao(struct Revendedor **raiz, struct Revendedor *z) {
-    while (z->pai->cor == VERMELHO) {
+    while (z->pai != NULL && z->pai->cor == VERMELHO) {
         if (z->pai == z->pai->pai->esq) {
             struct Revendedor *tio = z->pai->pai->dir;
-            if (tio->cor == VERMELHO) {
+            if (corDe(tio) == VERMELHO) {
                 z->pai->cor = PRETO;
                 tio->cor = PRETO;
                 z->pai->pai->cor = VERMELHO;
@@ -117,7 +112,7 @@ void corrigirInsercao(struct Revendedor **raiz, struct Revendedor *z) {
             }
         } else {
             struct Revendedor *tio = z->pai->pai->esq;
-            if (tio->cor == VERMELHO) {
+            if (corDe(tio) == VERMELHO) {
                 z->pai->cor = PRETO;
                 tio->cor = PRETO;
                 z->pai->pai->cor = VERMELHO;
@@ -138,7 +133,7 @@ void corrigirInsercao(struct Revendedor **raiz, struct Revendedor *z) {
 
 // Insere como numa ABB (no novo vermelho) e depois corrige. Retorna 0 se o CNPJ ja existe.
 int inserirRevendedor(struct Revendedor **raiz, char *cnpj, char *nome, char *endereco, char *contato) {
-    if (buscarRevendedor(*raiz, cnpj) != NIL)
+    if (buscarRevendedor(*raiz, cnpj) != NULL)
         return 0;
 
     struct Revendedor *z = (struct Revendedor *)malloc(sizeof(struct Revendedor));
@@ -148,11 +143,11 @@ int inserirRevendedor(struct Revendedor **raiz, char *cnpj, char *nome, char *en
     strcpy(z->contato, contato);
     z->historico = NULL;
     z->cor = VERMELHO;
-    z->esq = z->dir = NIL;
+    z->esq = z->dir = NULL;
 
-    struct Revendedor *y = NIL;
+    struct Revendedor *y = NULL;
     struct Revendedor *x = *raiz;
-    while (x != NIL) {
+    while (x != NULL) {
         y = x;
         if (strcmp(cnpj, x->cnpj) < 0)
             x = x->esq;
@@ -161,7 +156,7 @@ int inserirRevendedor(struct Revendedor **raiz, char *cnpj, char *nome, char *en
     }
 
     z->pai = y;
-    if (y == NIL)
+    if (y == NULL)
         *raiz = z;
     else if (strcmp(cnpj, y->cnpj) < 0)
         y->esq = z;
@@ -172,78 +167,82 @@ int inserirRevendedor(struct Revendedor **raiz, char *cnpj, char *nome, char *en
     return 1;
 }
 
-// Coloca a subarvore v no lugar da subarvore u.
+// Coloca a subarvore v (que pode ser NULL) no lugar da subarvore u.
 void transplantar(struct Revendedor **raiz, struct Revendedor *u, struct Revendedor *v) {
-    if (u->pai == NIL)
+    if (u->pai == NULL)
         *raiz = v;
     else if (u == u->pai->esq)
         u->pai->esq = v;
     else
         u->pai->dir = v;
-    v->pai = u->pai;
+    if (v != NULL)
+        v->pai = u->pai;
 }
 
 struct Revendedor *minimo(struct Revendedor *x) {
-    while (x->esq != NIL)
+    while (x->esq != NULL)
         x = x->esq;
     return x;
 }
 
-// Resolve o "preto extra" que fica em x quando um no preto e removido.
-void corrigirRemocao(struct Revendedor **raiz, struct Revendedor *x) {
+// Resolve o "preto extra" em x quando um no preto e removido. Como x pode ser NULL, o pai vem de fora.
+void corrigirRemocao(struct Revendedor **raiz, struct Revendedor *x, struct Revendedor *pai) {
     struct Revendedor *w;
-    while (x != *raiz && x->cor == PRETO) {
-        if (x == x->pai->esq) {
-            w = x->pai->dir;
-            if (w->cor == VERMELHO) {
+    while (x != *raiz && corDe(x) == PRETO) {
+        if (x == pai->esq) {
+            w = pai->dir;
+            if (corDe(w) == VERMELHO) {
                 w->cor = PRETO;
-                x->pai->cor = VERMELHO;
-                rotacaoEsquerda(raiz, x->pai);
-                w = x->pai->dir;
+                pai->cor = VERMELHO;
+                rotacaoEsquerda(raiz, pai);
+                w = pai->dir;
             }
-            if (w->esq->cor == PRETO && w->dir->cor == PRETO) {
+            if (corDe(w->esq) == PRETO && corDe(w->dir) == PRETO) {
                 w->cor = VERMELHO;
-                x = x->pai;
+                x = pai;
+                pai = x->pai;
             } else {
-                if (w->dir->cor == PRETO) {
+                if (corDe(w->dir) == PRETO) {
                     w->esq->cor = PRETO;
                     w->cor = VERMELHO;
                     rotacaoDireita(raiz, w);
-                    w = x->pai->dir;
+                    w = pai->dir;
                 }
-                w->cor = x->pai->cor;
-                x->pai->cor = PRETO;
+                w->cor = pai->cor;
+                pai->cor = PRETO;
                 w->dir->cor = PRETO;
-                rotacaoEsquerda(raiz, x->pai);
+                rotacaoEsquerda(raiz, pai);
                 x = *raiz;
             }
         } else {
-            w = x->pai->esq;
-            if (w->cor == VERMELHO) {
+            w = pai->esq;
+            if (corDe(w) == VERMELHO) {
                 w->cor = PRETO;
-                x->pai->cor = VERMELHO;
-                rotacaoDireita(raiz, x->pai);
-                w = x->pai->esq;
+                pai->cor = VERMELHO;
+                rotacaoDireita(raiz, pai);
+                w = pai->esq;
             }
-            if (w->dir->cor == PRETO && w->esq->cor == PRETO) {
+            if (corDe(w->dir) == PRETO && corDe(w->esq) == PRETO) {
                 w->cor = VERMELHO;
-                x = x->pai;
+                x = pai;
+                pai = x->pai;
             } else {
-                if (w->esq->cor == PRETO) {
+                if (corDe(w->esq) == PRETO) {
                     w->dir->cor = PRETO;
                     w->cor = VERMELHO;
                     rotacaoEsquerda(raiz, w);
-                    w = x->pai->esq;
+                    w = pai->esq;
                 }
-                w->cor = x->pai->cor;
-                x->pai->cor = PRETO;
+                w->cor = pai->cor;
+                pai->cor = PRETO;
                 w->esq->cor = PRETO;
-                rotacaoDireita(raiz, x->pai);
+                rotacaoDireita(raiz, pai);
                 x = *raiz;
             }
         }
     }
-    x->cor = PRETO;
+    if (x != NULL)
+        x->cor = PRETO;
 }
 
 void liberarCompras(struct Compra *c) {
@@ -257,26 +256,29 @@ void liberarCompras(struct Compra *c) {
 // Remove o revendedor (e o historico dele). Retorna 0 se o CNPJ nao existe.
 int removerRevendedor(struct Revendedor **raiz, char *cnpj) {
     struct Revendedor *z = buscarRevendedor(*raiz, cnpj);
-    if (z == NIL)
+    if (z == NULL)
         return 0;
 
-    struct Revendedor *y = z;
     struct Revendedor *x;
-    int corOriginal = y->cor;
+    struct Revendedor *paiX;
+    enum Cor corOriginal = z->cor;
 
-    if (z->esq == NIL) {
+    if (z->esq == NULL) {
         x = z->dir;
+        paiX = z->pai;
         transplantar(raiz, z, z->dir);
-    } else if (z->dir == NIL) {
+    } else if (z->dir == NULL) {
         x = z->esq;
+        paiX = z->pai;
         transplantar(raiz, z, z->esq);
     } else {
-        y = minimo(z->dir);
+        struct Revendedor *y = minimo(z->dir);
         corOriginal = y->cor;
         x = y->dir;
         if (y->pai == z) {
-            x->pai = y;
+            paiX = y;
         } else {
+            paiX = y->pai;
             transplantar(raiz, y, y->dir);
             y->dir = z->dir;
             y->dir->pai = y;
@@ -288,16 +290,25 @@ int removerRevendedor(struct Revendedor **raiz, char *cnpj) {
     }
 
     if (corOriginal == PRETO)
-        corrigirRemocao(raiz, x);
+        corrigirRemocao(raiz, x, paiX);
 
     liberarCompras(z->historico);
     free(z);
     return 1;
 }
 
+void liberarArvore(struct Revendedor *r) {
+    if (r == NULL)
+        return;
+    liberarArvore(r->esq);
+    liberarArvore(r->dir);
+    liberarCompras(r->historico);
+    free(r);
+}
+
 // Mostra os CNPJs em ordem crescente, com a cor de cada no (P ou V).
 void emOrdem(struct Revendedor *r) {
-    if (r == NIL)
+    if (r == NULL)
         return;
     emOrdem(r->esq);
     printf("%s(%c) ", r->cnpj, r->cor == PRETO ? 'P' : 'V');
@@ -305,11 +316,9 @@ void emOrdem(struct Revendedor *r) {
 }
 
 int main(void) {
-    struct Revendedor *raiz;
+    struct Revendedor *raiz = NULL;
     char *cnpjs[] = {"11111111000111", "22222222000122", "33333333000133", "44444444000144",
                      "55555555000155", "66666666000166", "77777777000177"};
-
-    iniciarArvore(&raiz);
 
     for (int i = 0; i < 7; i++)
         inserirRevendedor(&raiz, cnpjs[i], "Revendedor", "Picos-PI", "contato");
@@ -318,8 +327,8 @@ int main(void) {
     emOrdem(raiz);
     printf("\nRaiz: %s\n\n", raiz->cnpj);
 
-    printf("Buscar 55555555000155: %s\n", buscarRevendedor(raiz, "55555555000155") != NIL ? "encontrado" : "nao encontrado");
-    printf("Buscar 99999999000199: %s\n\n", buscarRevendedor(raiz, "99999999000199") != NIL ? "encontrado" : "nao encontrado");
+    printf("Buscar 55555555000155: %s\n", buscarRevendedor(raiz, "55555555000155") != NULL ? "encontrado" : "nao encontrado");
+    printf("Buscar 99999999000199: %s\n\n", buscarRevendedor(raiz, "99999999000199") != NULL ? "encontrado" : "nao encontrado");
 
     printf("Remover 22222222000122: %d\n", removerRevendedor(&raiz, "22222222000122"));
     printf("Remover 44444444000144: %d\n", removerRevendedor(&raiz, "44444444000144"));
@@ -328,5 +337,6 @@ int main(void) {
     emOrdem(raiz);
     printf("\nRaiz: %s\n", raiz->cnpj);
 
+    liberarArvore(raiz);
     return 0;
 }
