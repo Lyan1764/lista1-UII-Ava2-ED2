@@ -386,3 +386,75 @@ int altura(struct Revendedor *r) {
     return 1 + (e > d ? e : d);
 }
 
+// Insere os 100 CNPJs na ordem recebida e depois faz as buscas, contando os passos.
+void executarCaso(char *titulo, long long ordem[], long long buscas[], long long inexistente) {
+    struct Revendedor *raiz = NULL;
+    char cnpj[20];
+    int passos, soma = 0;
+
+    for (int i = 0; i < TOTAL; i++) {
+        sprintf(cnpj, "%014lld", ordem[i]);
+        inserirRevendedor(&raiz, cnpj, "Revendedor", "Picos-PI", "contato");
+    }
+
+    printf("\n%s (altura da arvore: %d niveis)\n", titulo, altura(raiz));
+    for (int i = 0; i < BUSCAS; i++) {
+        sprintf(cnpj, "%014lld", buscas[i]);
+        passos = 0;
+        buscarPassos(raiz, cnpj, &passos);
+        soma += passos;
+        printf("  %s: %d passos\n", cnpj, passos);
+    }
+    printf("  media dos %d CNPJs: %.1f passos\n", BUSCAS, soma / (double)BUSCAS);
+
+    sprintf(cnpj, "%014lld", inexistente);
+    passos = 0;
+    buscarPassos(raiz, cnpj, &passos);
+    printf("  CNPJ nao cadastrado %s: %d passos\n", cnpj, passos);
+
+    liberarArvore(raiz);
+}
+
+void experimento(void) {
+    long long cnpjs[TOTAL], ordenados[TOTAL], ordem[TOTAL], buscas[BUSCAS], inexistente;
+
+    gerarCnpjs(cnpjs);
+    memcpy(ordenados, cnpjs, sizeof(cnpjs));
+    ordenar(ordenados, TOTAL);
+
+    // Os 10 CNPJs buscados saem de um embaralhamento e valem para os quatro casos.
+    memcpy(ordem, cnpjs, sizeof(cnpjs));
+    embaralhar(ordem, TOTAL);
+    memcpy(buscas, ordem, sizeof(buscas));
+
+    do {
+        inexistente = sortearCnpj();
+    } while (contem(cnpjs, TOTAL, inexistente));
+
+    executarCaso("Caso 1 - crescente", ordenados, buscas, inexistente);
+
+    for (int i = 0; i < TOTAL; i++)
+        ordem[i] = ordenados[TOTAL - 1 - i];
+    executarCaso("Caso 2 - decrescente", ordem, buscas, inexistente);
+
+    // Aleatorio, mas com o CNPJ do meio (da lista ordenada) inserido primeiro.
+    memcpy(ordem, cnpjs, sizeof(cnpjs));
+    embaralhar(ordem, TOTAL);
+    for (int i = 0; i < TOTAL; i++)
+        if (ordem[i] == ordenados[TOTAL / 2]) {
+            ordem[i] = ordem[0];
+            ordem[0] = ordenados[TOTAL / 2];
+            break;
+        }
+    executarCaso("Caso 3 - meio primeiro, resto aleatorio", ordem, buscas, inexistente);
+
+    memcpy(ordem, cnpjs, sizeof(cnpjs));
+    embaralhar(ordem, TOTAL);
+    executarCaso("Caso 4 - totalmente aleatorio", ordem, buscas, inexistente);
+}
+
+int main(void) {
+    printf("==== Experimento (item d) ====\n");
+    experimento();
+    return 0;
+}
